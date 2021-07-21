@@ -52,6 +52,15 @@ public class NumberScrollCounter: UIView {
     /// The string that will be used to represent negative values.
     let negativeSign = "-"
     
+    /// The string to use as the delimiter for the items in `digitScrollers`.
+    let delimeterSign: String? = ","
+    /// Number of digits in whole number part to seperate by `delimeterSign`.
+    let delimeterGroup: Int = 3
+    /// Calulated delimiter indexes for `currentValueString`
+    private var delimeterPositions: Set<Int> = []
+    /// Delimiter presentation views
+    private var delimeterViews: [UIView] = []
+    
     /// The view that holds the prefix, or `nil` if there is no prefix.
     private var prefixView: UIView?
     /// The view that holds the suffix, or `nil` if there is no suffix.
@@ -268,7 +277,10 @@ public class NumberScrollCounter: UIView {
             updateScrollers(remove: digitsToRemove, animated: animated)
         }
         
+        let wholeDigitCount = digitsOnly.count - calculatedDecimalPlaces
+        
         updateScrollers(withDigits: digitsOnly, animated: animated)
+        updateDelimeters(digitPositions: wholeDigitCount, delimeterGroup: delimeterGroup)
         updateScrollerLayout(animated: animated)
     }
     
@@ -360,7 +372,9 @@ public class NumberScrollCounter: UIView {
         }
         
         let startingX = startingXCoordinate
-        let seperatorLocation = digitScrollers.count - decimalPlaces
+        let seperatorIndex = digitScrollers.count - calculatedDecimalPlaces
+        var trailingX = startingX
+        var delimeterIndex = 0
         
         for (index, scroller) in digitScrollers.enumerated() {
             if scroller.superview == nil {
@@ -369,24 +383,34 @@ public class NumberScrollCounter: UIView {
                 scroller.alpha = 0
             }
             
-            var x = startingX + CGFloat(index) * scroller.width
-            if index >= seperatorLocation, let seperatorView = seperatorView {
-                x += seperatorView.frame.width
-            }
-            animator.addAnimations {
-                scroller.alpha = 1
-                scroller.frame.origin.x = x
-            }
-            
-            if index == seperatorLocation, let seperatorView = seperatorView {
+            if delimeterPositions.contains(index) {
+                let delimeterView = delimeterViews[delimeterIndex]
+                delimeterView.frame.origin.x = trailingX
+                delimeterIndex += 1
+                trailingX += delimeterView.frame.width
                 animator.addAnimations {
-                    seperatorView.alpha = 1
-                    seperatorView.frame.origin.x = (startingX + CGFloat(index) * scroller.width)
+                    delimeterView.alpha = 1
                 }
             }
+            
+            let separatorPosition = trailingX
+            if index == seperatorIndex, let seperatorView = seperatorView {
+                animator.addAnimations {
+                    seperatorView.alpha = 1
+                    seperatorView.frame.origin.x = separatorPosition
+                }
+                trailingX += seperatorView.frame.size.width
+            }
+
+            let scrollerPosition = trailingX
+            animator.addAnimations {
+                scroller.alpha = 1
+                scroller.frame.origin.x = scrollerPosition
+            }
+            trailingX += scroller.frame.size.width
         }
     }
-    
+
     /**
      Updates whether or not a negative sign is needed, and then animates any changes accordingly.
      */
@@ -497,6 +521,9 @@ public class NumberScrollCounter: UIView {
             if let view = negativeSignView, isCurrentValueNagative {
                 suffixX += view.frame.width
             }
+            if let delimeterView = delimeterViews.first {
+                suffixX += delimeterView.frame.width * CGFloat(delimeterViews.count)
+            }
             
             animator.addAnimations {
                 suffixView.frame.origin.x = suffixX
@@ -575,5 +602,72 @@ public class NumberScrollCounter: UIView {
                 scroller.scrollToItem(atIndex: digits[i], animated: animated)
             }
         }
+    }
+    
+    // MARK: - Delimiters
+    
+    /**
+     Updates the delimiters displayed between `digitScrollers`.
+     */
+    private func updateDelimeters(digitPositions: Int, delimeterGroup: Int) {
+        delimeterPositions = delimeterIndexes(for: digitPositions, digitsInGroup: delimeterGroup)
+        let diff = delimeterViews.count - delimeterPositions.count
+        if diff < 0 { // Add delimeters
+            for _ in 0..<diff.magnitude {
+                let delimeterView = buildDelimeterView()
+                addSubview(delimeterView)
+                delimeterViews.append(delimeterView)
+            }
+        }
+        else if diff > 0 {
+            for _ in 0..<diff.magnitude {
+                let delimeterToRemove = delimeterViews.removeFirst()
+                delimeterToRemove.removeFromSuperview()
+            }
+        }
+    }
+    
+    /**
+     Builds view to delimiter presentation
+     */
+    private func buildDelimeterView() -> UIView {
+        let delimeterLabel = UILabel()
+        delimeterLabel.text = delimeterSign
+        delimeterLabel.textColor = textColor
+        delimeterLabel.font = font
+        delimeterLabel.adjustsFontForContentSizeCategory = true
+        delimeterLabel.sizeToFit()
+        delimeterLabel.textAlignment = .center
+        delimeterLabel.frame.origin = CGPoint.zero
+        delimeterLabel.alpha = 0
+        return delimeterLabel
+    }
+    
+    /**
+     Calculates delimiter positions.
+     
+     - parameters:
+        - digitsCount: total number of digits for that delimiter positions will be calculated
+        - digitsInGroup: number of digits in groups that will be separated by delimiters
+     */
+    private func delimeterIndexes(for digitsCount: Int, digitsInGroup: Int) -> Set<Int> {
+        guard digitsCount > 0, digitsInGroup > 0 else {
+            return []
+        }
+
+        var delimetersCount = digitsCount / digitsInGroup
+        if digitsCount % digitsInGroup == 0 {
+            delimetersCount -= 1 // No delimeter before first digit
+        }
+        guard delimetersCount > 0 else {
+            return []
+        }
+        
+        var result = Set<Int>()
+        for i in 1...delimetersCount {
+            let pos = digitsCount - i * digitsInGroup
+            result.insert(pos)
+        }
+        return result
     }
 }
