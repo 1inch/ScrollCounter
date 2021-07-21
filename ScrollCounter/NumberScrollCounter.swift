@@ -137,10 +137,21 @@ public class NumberScrollCounter: UIView {
         frame.size.height = digitScrollers.first!.height
         
         sizeToFit()
+        
+        setup()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setup() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(preferredContentSizeChanged),
+            name: UIContentSizeCategory.didChangeNotification,
+            object: nil
+        )
     }
     
     public override func sizeToFit() {
@@ -153,6 +164,55 @@ public class NumberScrollCounter: UIView {
         }
         
         self.frame.size.width = width
+    }
+    
+    @objc
+    private func preferredContentSizeChanged() {
+        resetLayout()
+    }
+    
+    /**
+     Recreate all views to apply Dynamic Type changes
+     */
+    private func resetLayout() {
+        let scrollersCount = digitScrollers.count
+        updateScrollers(remove: scrollersCount, animated: false)
+        if let seperatorView = seperatorView {
+            if seperatorView.superview != nil {
+                seperatorView.removeFromSuperview()
+            }
+            self.seperatorView = nil
+        }
+        
+        if let prefixView = prefixView {
+            if prefixView.superview != nil {
+                prefixView.removeFromSuperview()
+            }
+            self.prefixView = nil
+        }
+        
+        if let suffixView = suffixView {
+            if suffixView.superview != nil {
+                suffixView.removeFromSuperview()
+            }
+            self.suffixView = nil
+        }
+        
+        if let negativeSignView = negativeSignView {
+            if negativeSignView.superview != nil {
+                negativeSignView.removeFromSuperview()
+            }
+            self.negativeSignView = nil
+        }
+        
+        delimeterViews.forEach {
+            $0.removeFromSuperview()
+        }
+        delimeterViews = []
+        
+        if let valueStr = currentValueString {
+            setValue(valueStr, animated: false)
+        }
     }
     
     // MARK: - Control
@@ -268,6 +328,7 @@ public class NumberScrollCounter: UIView {
         seperatorLabel.text = seperator
         seperatorLabel.textColor = textColor
         seperatorLabel.font = font
+        seperatorLabel.adjustsFontForContentSizeCategory = true
         seperatorLabel.sizeToFit()
         seperatorLabel.frame.size.width += 2 * seperatorSpacing
         seperatorLabel.textAlignment = .center
@@ -334,6 +395,7 @@ public class NumberScrollCounter: UIView {
                 negativeLabel.text = negativeSign
                 negativeLabel.textColor = textColor
                 negativeLabel.font = font
+                negativeLabel.adjustsFontForContentSizeCategory = true
                 negativeLabel.sizeToFit()
                 negativeLabel.frame.origin = CGPoint.zero
                 addSubview(negativeLabel)
@@ -372,6 +434,7 @@ public class NumberScrollCounter: UIView {
             prefixLabel.text = prefix
             prefixLabel.textColor = textColor
             prefixLabel.font = font
+            prefixLabel.adjustsFontForContentSizeCategory = true
             prefixLabel.sizeToFit()
             prefixLabel.frame.origin = CGPoint.zero
             addSubview(prefixLabel)
@@ -405,6 +468,7 @@ public class NumberScrollCounter: UIView {
             suffixLabel.text = suffix
             suffixLabel.textColor = textColor
             suffixLabel.font = font
+            suffixLabel.adjustsFontForContentSizeCategory = true
             suffixLabel.sizeToFit()
             suffixLabel.frame.origin = CGPoint.zero
             addSubview(suffixLabel)

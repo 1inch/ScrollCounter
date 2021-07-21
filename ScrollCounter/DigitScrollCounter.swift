@@ -40,9 +40,10 @@ public class DigitScrollCounter: ScrollableCounter {
             label.text = String(i)
             label.font = font
             label.textAlignment = .center
-            label.sizeToFit()
             label.textColor = textColor
             label.backgroundColor = backgroundColor
+            label.adjustsFontForContentSizeCategory = true
+            label.sizeToFit()
             
             if label.frame.height > biggestFrameHeight {
                 biggestFrameHeight = label.frame.height
