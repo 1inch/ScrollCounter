@@ -17,7 +17,7 @@ public class NumberScrollCounter: UIView {
     
     /// The `DigitScrollCounter`s that are stacked horizontally to make up the displayed number.
     private var digitScrollers = [DigitScrollCounter]()
-    
+
     /// The animation duration used when fading-out a `DigitScrollCounter`.  This is calculated as half of `slideDuration`.
     private var fadeOutDuration: TimeInterval {
         return slideDuration / 2
@@ -28,17 +28,20 @@ public class NumberScrollCounter: UIView {
     public var slideDuration: TimeInterval = 0.5
     
     /// The current value being displayed, or the number being animated to if the `NumberScrollCounter` is still animating.
-    public private(set) var currentValue: Float
+    private(set) var currentValueString: String?
+    /// Negative value flag calculated from `currentValueString`
+    private var isCurrentValueNagative: Bool = false
     
     /// The spacing between the `seperator` and the adjacent items in `digitScrollers`.
     public var seperatorSpacing: CGFloat
-    /// The number of decimal places that should be displayed.
-    public var decimalPlaces: Int
     /// The font to use for all of the labels used in building the `NumberScrollCounter`.
     public let font: UIFont
     /// The text color to use for all of the labels used in building the `NumberScrollCounter`.
     public let textColor: UIColor
-    private let digitScrollerBackgroundColor: UIColor = .clear
+    /// The number of decimal places that should be displayed. Set 0 to display all digits after `seperator` in `currentValueString`
+    public var decimalPlaces: Int
+    /// Calculated number of decimal places that should be displayed. It has different value from `decimalPlaces` is it value equals 0.
+    private var calculatedDecimalPlaces: Int = 0
     
     /// The string to use as a prefix to the items in `digitScrollers`.
     public var prefix: String?
@@ -73,7 +76,7 @@ public class NumberScrollCounter: UIView {
         if let prefixView = prefixView {
             startingX += prefixView.frame.width
         }
-        if let negativeSignView = negativeSignView, currentValue < 0 {
+        if let negativeSignView = negativeSignView, isCurrentValueNagative {
             startingX += negativeSignView.frame.width
         }
         return startingX
@@ -110,10 +113,9 @@ public class NumberScrollCounter: UIView {
         - gradientColor: The color to use for the vertical gradient.  If this is `nil`, then no gradient is applied.
         - gradientStop: The stopping point for the gradient, where the bottom stopping point is (1 - gradientStop).  If gradientStop is not less than 0.5 than it is ignored.  If this is `nil`, then no gradient is applied.
      */
-    public init(value: Float, scrollDuration: TimeInterval = 0.3, decimalPlaces: Int = 0, prefix: String? = nil, suffix: String? = nil, seperator: String = ".", seperatorSpacing: CGFloat = 0, font: UIFont = UIFont.boldSystemFont(ofSize: UIFont.labelFontSize), textColor: UIColor = .black, animateInitialValue: Bool = false, gradientColor: UIColor? = nil, gradientStop: Float? = nil) {
+    public init(value: String, scrollDuration: TimeInterval = 0.3, decimalPlaces: Int = 0, prefix: String? = nil, suffix: String? = nil, seperator: String = ".", seperatorSpacing: CGFloat = 0, font: UIFont = UIFont.boldSystemFont(ofSize: UIFont.labelFontSize), textColor: UIColor = .black, animateInitialValue: Bool = false, gradientColor: UIColor? = nil, gradientStop: Float? = nil) {
 
-        self.currentValue = value
-        
+        self.currentValueString = value
         self.decimalPlaces = decimalPlaces
         self.font = font
         self.textColor = textColor
@@ -224,13 +226,31 @@ public class NumberScrollCounter: UIView {
         - animated: Whether or not the scrolling should be animated.  Defaults to `true`.
      */
     public func setValue(_ value: Float, animated: Bool = true) {
-        currentValue = value
+        let stringValue = String(format: "%.\(decimalPlaces)f", value)
+        setValue(stringValue, animated: animated)
+    }
+    
+    /**
+     Updates the value to be displayed, and then immediately displays it or animates into it.
+     - parameters:
+        - value: The string value to display. Suitable to display Decimal type values.
+        - animated: Whether or not the scrolling should be animated.  Defaults to `true`.
+     */
+    public func setValue(_ value: String, animated: Bool = true) {
+        currentValueString = value
+        isCurrentValueNagative = value.hasPrefix(negativeSign)
         
-        var digitString = getStringArray(fromValue: currentValue)
+        let digitString = getStringArray(fromValue: value)
         if decimalPlaces == 0, digitString.contains(seperator) {
-            while let lastElement = digitString.popLast(), lastElement != seperator {
-                continue
+            if let sepraratorIdx = digitString.lastIndex(of: seperator) {
+                calculatedDecimalPlaces = digitString.count - 1 - sepraratorIdx
             }
+            else {
+                calculatedDecimalPlaces = 0
+            }
+        }
+        else {
+            calculatedDecimalPlaces = decimalPlaces
         }
         
         var digitsOnly = [Int]()
@@ -239,7 +259,7 @@ public class NumberScrollCounter: UIView {
                 digitsOnly.append(value)
             }
         }
-     
+        
         if digitsOnly.count > digitScrollers.count {
             let digitsToAdd = digitsOnly.count - digitScrollers.count
             updateScrollers(add: digitsToAdd)
@@ -252,15 +272,8 @@ public class NumberScrollCounter: UIView {
         updateScrollerLayout(animated: animated)
     }
     
-    /**
-     Converts the given float to an array of strings.
-     
-     - parameters:
-        - value: The value to convert to an array of strings.
-     - returns: An array of strings that matches the given value.
-     */
-    private func getStringArray(fromValue value: Float) -> [String] {
-        return String(format: "%.\(decimalPlaces)f", value).compactMap { character -> String in
+    private func getStringArray(fromValue value: String) -> [String] {
+        value.compactMap { character -> String in
             var entry = String(character)
             let result = character.wholeNumberValue
             if let resultNumber = result {
@@ -269,7 +282,6 @@ public class NumberScrollCounter: UIView {
             return entry
         }
     }
-        
     
     // MARK: - Scroller Updates
     
@@ -320,7 +332,7 @@ public class NumberScrollCounter: UIView {
      Creates a seperator view if one is needed but does not exist.  This does not update the layout of the seperator view.
      */
     private func createSeperatorViewIfNeeded() {
-        guard decimalPlaces > 0, seperatorView == nil else {
+        guard calculatedDecimalPlaces > 0, seperatorView == nil else {
             return
         }
         
@@ -383,9 +395,7 @@ public class NumberScrollCounter: UIView {
             return
         }
         
-        let includeNegativeSign = currentValue < 0
-        
-        if includeNegativeSign {
+        if isCurrentValueNagative {
             if let negativeSignView = negativeSignView, negativeSignView.alpha != 1 {
                 animator.addAnimations {
                     negativeSignView.alpha = 1
@@ -422,12 +432,10 @@ public class NumberScrollCounter: UIView {
     /**
     Updates the location of the prefix (if there is one), and then animates any changes accordingly.
     */
-    func updatePrefix() {
+    private func updatePrefix() {
         guard let animator = self.animator else {
             return
         }
-        
-        let includeNegativeSign = currentValue < 0
         
         if prefixView == nil, let prefix = prefix {
             let prefixLabel = UILabel()
@@ -445,7 +453,7 @@ public class NumberScrollCounter: UIView {
 
         if let prefixView = self.prefixView {
             var prefixX: CGFloat = 0
-            if let negativeSignView = negativeSignView, includeNegativeSign {
+            if let negativeSignView = negativeSignView, isCurrentValueNagative {
                 prefixX = negativeSignView.frame.width
             }
             animator.addAnimations {
@@ -458,7 +466,7 @@ public class NumberScrollCounter: UIView {
     /**
     Updates the location of the suffix (if there is one), and then animates any changes accordingly.
     */
-    func updateSuffix() {
+    private func updateSuffix() {
         guard let animator = self.animator else {
             return
         }
@@ -486,7 +494,7 @@ public class NumberScrollCounter: UIView {
             if let view = prefixView {
                 suffixX += view.frame.width
             }
-            if let view = negativeSignView, currentValue < 0 {
+            if let view = negativeSignView, isCurrentValueNagative {
                 suffixX += view.frame.width
             }
             
@@ -509,7 +517,14 @@ public class NumberScrollCounter: UIView {
     private func updateScrollers(add count: Int) {
         var newScrollers = [DigitScrollCounter]()
         for _ in 0..<count {
-            let digitScrollCounter = DigitScrollCounter(font: font, textColor: textColor, backgroundColor: digitScrollerBackgroundColor, scrollDuration: scrollDuration, gradientColor: gradientColor, gradientStop: gradientStop)
+            let digitScrollCounter = DigitScrollCounter(
+                font: font,
+                textColor: textColor,
+                backgroundColor: .clear,
+                scrollDuration: scrollDuration,
+                gradientColor: gradientColor,
+                gradientStop: gradientStop
+            )
             newScrollers.append(digitScrollCounter)
         }
         digitScrollers.insert(contentsOf: newScrollers, at: 0)
