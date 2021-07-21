@@ -28,7 +28,16 @@ public class DigitScrollCounter: ScrollableCounter {
         - gradientColor: The color of the vertical gradient applied to the scroll counter.  If this is `nil`, then no gradient is applied.
         - gradientStop: The stopping point for the gradient, where the bottom stopping point is (1 - gradientStop).  If this is `nil`, then no gradient is applied.
      */
-    public init(min: Int = 0, max: Int = 9, font: UIFont, textColor: UIColor, backgroundColor: UIColor, scrollDuration: TimeInterval, gradientColor: UIColor? = nil, gradientStop: Float? = nil) {
+    public init(
+        min: Int = 0,
+        max: Int = 9,
+        font: UIFont,
+        textColor: UIColor,
+        backgroundColor: UIColor,
+        scrollDuration: TimeInterval,
+        gradientColor: UIColor? = nil,
+        gradientStop: Float? = nil
+    ) {
         assert(min < max, "The min value must be less than the max value.")
         var labels = [UILabel]()
         
@@ -42,7 +51,7 @@ public class DigitScrollCounter: ScrollableCounter {
             label.textAlignment = .center
             label.textColor = textColor
             label.backgroundColor = backgroundColor
-            label.adjustsFontForContentSizeCategory = true
+            label.adjustsFontForContentSizeCategory = false
             label.sizeToFit()
             
             if label.frame.height > biggestFrameHeight {
@@ -77,5 +86,4 @@ public class DigitScrollCounter: ScrollableCounter {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
 }

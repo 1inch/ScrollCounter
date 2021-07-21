@@ -28,14 +28,16 @@ public class NumberScrollCounter: UIView {
     public var slideDuration: TimeInterval = 0.5
     
     /// The current value being displayed, or the number being animated to if the `NumberScrollCounter` is still animating.
-    private(set) var currentValueString: String?
+    public private(set) var currentValueString: String?
+    /// The current string being displayed as-is (with prexix, suffix, separator and delimiters)
+    public private(set) var currentString: String?
     /// Negative value flag calculated from `currentValueString`
     private var isCurrentValueNagative: Bool = false
     
     /// The spacing between the `seperator` and the adjacent items in `digitScrollers`.
     public var seperatorSpacing: CGFloat
     /// The font to use for all of the labels used in building the `NumberScrollCounter`.
-    public let font: UIFont
+    public var font: UIFont
     /// The text color to use for all of the labels used in building the `NumberScrollCounter`.
     public let textColor: UIColor
     /// The number of decimal places that should be displayed. Set 0 to display all digits after `seperator` in `currentValueString`
@@ -48,14 +50,14 @@ public class NumberScrollCounter: UIView {
     /// The string to use as a suffix to the items in `digitScrollers`.
     public var suffix: String?
     /// The string to use as the decimal indicator for the items in `digitScrollers`.
-    let seperator: String
+    public let seperator: String
     /// The string that will be used to represent negative values.
-    let negativeSign = "-"
+    public let negativeSign = "-"
     
     /// The string to use as the delimiter for the items in `digitScrollers`.
-    let delimeterSign: String? = ","
+    public let delimeterSign: String?
     /// Number of digits in whole number part to seperate by `delimeterSign`.
-    let delimeterGroup: Int = 3
+    public let delimeterGroup: Int
     /// Calulated delimiter indexes for `currentValueString`
     private var delimeterPositions: Set<Int> = []
     /// Delimiter presentation views
@@ -122,7 +124,22 @@ public class NumberScrollCounter: UIView {
         - gradientColor: The color to use for the vertical gradient.  If this is `nil`, then no gradient is applied.
         - gradientStop: The stopping point for the gradient, where the bottom stopping point is (1 - gradientStop).  If gradientStop is not less than 0.5 than it is ignored.  If this is `nil`, then no gradient is applied.
      */
-    public init(value: String, scrollDuration: TimeInterval = 0.3, decimalPlaces: Int = 0, prefix: String? = nil, suffix: String? = nil, seperator: String = ".", seperatorSpacing: CGFloat = 0, font: UIFont = UIFont.boldSystemFont(ofSize: UIFont.labelFontSize), textColor: UIColor = .black, animateInitialValue: Bool = false, gradientColor: UIColor? = nil, gradientStop: Float? = nil) {
+    public init(
+        value: String,
+        scrollDuration: TimeInterval = 0.3,
+        decimalPlaces: Int = 0,
+        prefix: String? = nil,
+        suffix: String? = nil,
+        seperator: String = ".",
+        seperatorSpacing: CGFloat = 0,
+        delimeterSign: String? = nil,
+        delimeterGroup: Int = 0,
+        font: UIFont = UIFont.boldSystemFont(ofSize: UIFont.labelFontSize),
+        textColor: UIColor = .black,
+        animateInitialValue: Bool = false,
+        gradientColor: UIColor? = nil,
+        gradientStop: Float? = nil
+    ) {
 
         self.currentValueString = value
         self.decimalPlaces = decimalPlaces
@@ -133,6 +150,8 @@ public class NumberScrollCounter: UIView {
         self.suffix = suffix
         self.seperator = seperator
         self.seperatorSpacing = seperatorSpacing
+        self.delimeterSign = delimeterSign
+        self.delimeterGroup = delimeterGroup
         
         self.scrollDuration = scrollDuration
         self.gradientColor = gradientColor
@@ -148,21 +167,10 @@ public class NumberScrollCounter: UIView {
         frame.size.height = digitScrollers.first!.height
         
         sizeToFit()
-        
-        setup()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func setup() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(preferredContentSizeChanged),
-            name: UIContentSizeCategory.didChangeNotification,
-            object: nil
-        )
     }
     
     public override func sizeToFit() {
@@ -177,15 +185,13 @@ public class NumberScrollCounter: UIView {
         self.frame.size.width = width
     }
     
-    @objc
-    private func preferredContentSizeChanged() {
-        resetLayout()
-    }
-    
     /**
      Recreate all views to apply Dynamic Type changes
      */
-    private func resetLayout() {
+    public func resetLayout() {
+        
+        animator?.stopAnimation(true)
+        
         let scrollersCount = digitScrollers.count
         updateScrollers(remove: scrollersCount, animated: false)
         if let seperatorView = seperatorView {
@@ -224,6 +230,10 @@ public class NumberScrollCounter: UIView {
         if let valueStr = currentValueString {
             setValue(valueStr, animated: false)
         }
+    }
+    
+    public func stopAnimations() {
+        animator?.stopAnimation(true)
     }
     
     // MARK: - Control
@@ -328,7 +338,7 @@ public class NumberScrollCounter: UIView {
         createSeperatorViewIfNeeded()
         updateDigitScrollersLayout()
         updateSuffix()
-        
+                
         animator!.addCompletion({ _ in
             self.animator = nil
         })
@@ -352,7 +362,7 @@ public class NumberScrollCounter: UIView {
         seperatorLabel.text = seperator
         seperatorLabel.textColor = textColor
         seperatorLabel.font = font
-        seperatorLabel.adjustsFontForContentSizeCategory = true
+        seperatorLabel.adjustsFontForContentSizeCategory = false
         seperatorLabel.sizeToFit()
         seperatorLabel.frame.size.width += 2 * seperatorSpacing
         seperatorLabel.textAlignment = .center
@@ -429,7 +439,7 @@ public class NumberScrollCounter: UIView {
                 negativeLabel.text = negativeSign
                 negativeLabel.textColor = textColor
                 negativeLabel.font = font
-                negativeLabel.adjustsFontForContentSizeCategory = true
+                negativeLabel.adjustsFontForContentSizeCategory = false
                 negativeLabel.sizeToFit()
                 negativeLabel.frame.origin = CGPoint.zero
                 addSubview(negativeLabel)
@@ -454,7 +464,7 @@ public class NumberScrollCounter: UIView {
     }
     
     /**
-    Updates the location of the prefix (if there is one), and then animates any changes accordingly.
+     Updates the location of the prefix (if there is one), and then animates any changes accordingly.
     */
     private func updatePrefix() {
         guard let animator = self.animator else {
@@ -466,7 +476,7 @@ public class NumberScrollCounter: UIView {
             prefixLabel.text = prefix
             prefixLabel.textColor = textColor
             prefixLabel.font = font
-            prefixLabel.adjustsFontForContentSizeCategory = true
+            prefixLabel.adjustsFontForContentSizeCategory = false
             prefixLabel.sizeToFit()
             prefixLabel.frame.origin = CGPoint.zero
             addSubview(prefixLabel)
@@ -488,7 +498,7 @@ public class NumberScrollCounter: UIView {
     }
     
     /**
-    Updates the location of the suffix (if there is one), and then animates any changes accordingly.
+     Updates the location of the suffix (if there is one), and then animates any changes accordingly.
     */
     private func updateSuffix() {
         guard let animator = self.animator else {
@@ -500,7 +510,7 @@ public class NumberScrollCounter: UIView {
             suffixLabel.text = suffix
             suffixLabel.textColor = textColor
             suffixLabel.font = font
-            suffixLabel.adjustsFontForContentSizeCategory = true
+            suffixLabel.adjustsFontForContentSizeCategory = false
             suffixLabel.sizeToFit()
             suffixLabel.frame.origin = CGPoint.zero
             addSubview(suffixLabel)
@@ -635,7 +645,7 @@ public class NumberScrollCounter: UIView {
         delimeterLabel.text = delimeterSign
         delimeterLabel.textColor = textColor
         delimeterLabel.font = font
-        delimeterLabel.adjustsFontForContentSizeCategory = true
+        delimeterLabel.adjustsFontForContentSizeCategory = false
         delimeterLabel.sizeToFit()
         delimeterLabel.textAlignment = .center
         delimeterLabel.frame.origin = CGPoint.zero
