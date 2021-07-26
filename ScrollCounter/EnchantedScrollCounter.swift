@@ -34,10 +34,43 @@ public class EnchantedScrollCounter: UIView {
         }
     }
     
+    public var suffix: String? {
+        get {
+            scrollCounter.suffix
+        }
+        set {
+            scrollCounter.suffix = newValue
+        }
+    }
+    
+    public var fractionalDelimiterSign: String {
+        get {
+            scrollCounter.seperator
+        }
+        set {
+            scrollCounter.seperator = newValue
+        }
+    }
+    
+    public var groupDelimiterSign: String? {
+        get {
+            scrollCounter.delimeterSign
+        }
+        set {
+            scrollCounter.delimeterSign = newValue
+        }
+    }
+    
+    public var decimalPlaces: Int {
+        get {
+            scrollCounter.decimalPlaces
+        }
+        set {
+            scrollCounter.decimalPlaces = newValue
+        }
+    }
+    
     public let initialValue: String
-    public let fractionalSeperatorSign: String
-    public let digitDelimeterSign: String?
-    public let digitDelimeterGroup: Int
     
     private var font: UIFont
     private var fontSizeByCategories: [UIContentSizeCategory : CGFloat]
@@ -50,10 +83,10 @@ public class EnchantedScrollCounter: UIView {
             decimalPlaces: 0, // 0 for auto-detect mode
             prefix: nil,
             suffix: nil,
-            seperator: fractionalSeperatorSign,
+            seperator: ".",
             seperatorSpacing: 0.0,
-            delimeterSign: digitDelimeterSign,
-            delimeterGroup: digitDelimeterGroup,
+            delimeterSign: ",",
+            delimeterGroup: 3,
             font: font,
             textColor: textColor,
             animateInitialValue: false,
@@ -96,10 +129,7 @@ public class EnchantedScrollCounter: UIView {
         initialValue: String,
         font: UIFont,
         textColor: UIColor = .black,
-        gradientColors: (UIColor, UIColor)? = nil,
-        fractionalSeperatorSign: String,
-        digitDelimeterSign: String?,
-        digitDelimeterGroup: Int
+        gradientColors: (UIColor, UIColor)? = nil
     ) {
         self.initialValue = initialValue
         self.font = font
@@ -107,9 +137,6 @@ public class EnchantedScrollCounter: UIView {
         self.fontSizeByCategories = Self.buildFontSizeByCategories(for: font)
         self.textColor = textColor
         self.gradienColors = gradientColors
-        self.fractionalSeperatorSign = fractionalSeperatorSign
-        self.digitDelimeterSign = digitDelimeterSign
-        self.digitDelimeterGroup = digitDelimeterGroup
 
         super.init(frame: .zero)
 

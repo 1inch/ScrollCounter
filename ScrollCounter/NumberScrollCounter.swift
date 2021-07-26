@@ -41,21 +41,58 @@ public class NumberScrollCounter: UIView {
     /// The text color to use for all of the labels used in building the `NumberScrollCounter`.
     public let textColor: UIColor
     /// The number of decimal places that should be displayed. Set 0 to display all digits after `seperator` in `currentValueString`
-    public var decimalPlaces: Int
+    public var decimalPlaces: Int {
+        didSet {
+            if let currentValueString = currentValueString {
+                setValue(currentValueString, animated: false)
+            }
+        }
+    }
     /// Calculated number of decimal places that should be displayed. It has different value from `decimalPlaces` is it value equals 0.
     private var calculatedDecimalPlaces: Int = 0
     
     /// The string to use as a prefix to the items in `digitScrollers`.
-    public var prefix: String?
+    public var prefix: String? {
+        didSet {
+            if let prefixLabel = prefixView as? UILabel, prefixLabel.text != prefix {
+                prefixLabel.text = prefix
+                prefixLabel.sizeToFit()
+            }
+        }
+    }
     /// The string to use as a suffix to the items in `digitScrollers`.
-    public var suffix: String?
+    public var suffix: String? {
+        didSet {
+            if let suffixLabel = suffixView as? UILabel, suffixLabel.text != suffix {
+                suffixLabel.text = suffix
+                suffixLabel.sizeToFit()
+            }
+        }
+    }
     /// The string to use as the decimal indicator for the items in `digitScrollers`.
-    public let seperator: String
+    public var seperator: String {
+        didSet {
+            if let seperatorLabel = seperatorView as? UILabel {
+                seperatorLabel.text = seperator
+                seperatorLabel.sizeToFit()
+            }
+        }
+    }
     /// The string that will be used to represent negative values.
     public let negativeSign = "-"
-    
+
     /// The string to use as the delimiter for the items in `digitScrollers`.
-    public let delimeterSign: String?
+    public var delimeterSign: String? {
+        didSet {
+            delimeterViews
+                .compactMap {
+                    $0 as? UILabel
+                }
+                .forEach {
+                    $0.text = delimeterSign ?? ""
+                }
+        }
+    }
     /// Number of digits in whole number part to seperate by `delimeterSign`.
     public let delimeterGroup: Int
     /// Calulated delimiter indexes for `currentValueString`
@@ -259,17 +296,25 @@ public class NumberScrollCounter: UIView {
         currentValueString = value
         isCurrentValueNagative = value.hasPrefix(negativeSign)
         
-        let digitString = getStringArray(fromValue: value)
-        if decimalPlaces == 0, digitString.contains(seperator) {
-            if let sepraratorIdx = digitString.lastIndex(of: seperator) {
-                calculatedDecimalPlaces = digitString.count - 1 - sepraratorIdx
+        var digitString = getStringArray(fromValue: value)
+        if let sepraratorIdx = digitString.lastIndex(of: seperator) {
+            let numberOfFractionalDigits = digitString.count - 1 - sepraratorIdx
+            if decimalPlaces == 0 {
+                calculatedDecimalPlaces = numberOfFractionalDigits
             }
             else {
-                calculatedDecimalPlaces = 0
+                if decimalPlaces < numberOfFractionalDigits {
+                    let dropCount = numberOfFractionalDigits - decimalPlaces
+                    digitString.removeLast(dropCount)
+                    calculatedDecimalPlaces = decimalPlaces
+                }
+                else {
+                    calculatedDecimalPlaces = numberOfFractionalDigits
+                }
             }
         }
         else {
-            calculatedDecimalPlaces = decimalPlaces
+            calculatedDecimalPlaces = 0
         }
         
         var digitsOnly = [Int]()
@@ -484,7 +529,7 @@ public class NumberScrollCounter: UIView {
             prefixLabel.alpha = 0
             prefixView = prefixLabel
         }
-
+        
         if let prefixView = self.prefixView {
             var prefixX: CGFloat = 0
             if let negativeSignView = negativeSignView, isCurrentValueNagative {
