@@ -432,12 +432,6 @@ public class NumberScrollCounter: UIView {
         var delimeterIndex = 0
         
         for (index, scroller) in digitScrollers.enumerated() {
-            if scroller.superview == nil {
-                addSubview(scroller)
-                scroller.frame.origin.x = startingX
-                scroller.alpha = 0
-            }
-            
             if delimeterPositions.contains(index) {
                 let delimeterView = delimeterViews[delimeterIndex]
                 delimeterView.frame.origin.x = trailingX
@@ -456,11 +450,21 @@ public class NumberScrollCounter: UIView {
                 }
                 trailingX += seperatorView.frame.size.width
             }
-
+            
             let scrollerPosition = trailingX
-            animator.addAnimations {
-                scroller.alpha = 1
+            if scroller.superview == nil {
+                addSubview(scroller)
                 scroller.frame.origin.x = scrollerPosition
+                scroller.alpha = 0
+                animator.addAnimations {
+                    scroller.alpha = 1
+                }
+            }
+            else {
+                animator.addAnimations {
+                    scroller.alpha = 1
+                    scroller.frame.origin.x = scrollerPosition
+                }
             }
             trailingX += scroller.frame.size.width
         }
@@ -609,7 +613,7 @@ public class NumberScrollCounter: UIView {
             )
             newScrollers.append(digitScrollCounter)
         }
-        digitScrollers.insert(contentsOf: newScrollers, at: 0)
+        digitScrollers.append(contentsOf: newScrollers)
     }
     
     /**
@@ -627,14 +631,10 @@ public class NumberScrollCounter: UIView {
         if !animated {
             animationDuration = ScrollableCounter.noAnimationDuration
         }
-        for index in 0..<count {
-            let scroller = digitScrollers[0]
-            let leftShift = CGFloat(index) * scroller.frame.width * -1
-            
-            digitScrollers.remove(at: 0)
+        for _ in 0..<count {
+            let scroller = digitScrollers.removeLast()
             UIView.animate(withDuration: animationDuration, delay: 0, options: .curveEaseInOut, animations: {
                 scroller.alpha = 0
-                scroller.frame.origin.x += leftShift
             }) { _ in
                 scroller.removeFromSuperview()
             }
