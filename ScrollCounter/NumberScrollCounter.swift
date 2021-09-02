@@ -33,6 +33,8 @@ public class NumberScrollCounter: UIView {
     public private(set) var currentString: String?
     /// Negative value flag calculated from `currentValueString`
     private var isCurrentValueNagative: Bool = false
+    /// The current completion closure
+    private var currentCopmletion: (() -> Void)?
     
     /// The spacing between the `seperator` and the adjacent items in `digitScrollers`.
     public var seperatorSpacing: CGFloat
@@ -281,9 +283,9 @@ public class NumberScrollCounter: UIView {
         - value: The value to display.
         - animated: Whether or not the scrolling should be animated.  Defaults to `true`.
      */
-    public func setValue(_ value: Float, animated: Bool = true) {
+    public func setValue(_ value: Float, animated: Bool = true, completion: (() -> Void)? = nil) {
         let stringValue = String(format: "%.\(decimalPlaces)f", value)
-        setValue(stringValue, animated: animated)
+        setValue(stringValue, animated: animated, completion: completion)
     }
     
     /**
@@ -292,9 +294,10 @@ public class NumberScrollCounter: UIView {
         - value: The string value to display. Suitable to display Decimal type values.
         - animated: Whether or not the scrolling should be animated.  Defaults to `true`.
      */
-    public func setValue(_ value: String, animated: Bool = true) {
+    public func setValue(_ value: String, animated: Bool = true, completion: (() -> Void)? = nil) {
         currentValueString = value
         isCurrentValueNagative = value.hasPrefix(negativeSign)
+        currentCopmletion = completion
         
         var digitString = getStringArray(fromValue: value)
         if let sepraratorIdx = digitString.lastIndex(of: seperator) {
@@ -384,7 +387,10 @@ public class NumberScrollCounter: UIView {
         updateDigitScrollersLayout()
         updateSuffix()
                 
-        animator!.addCompletion({ _ in
+        animator!.addCompletion({ position in
+            if position == .end, let completion = self.currentCopmletion {
+                completion()
+            }
             self.animator = nil
         })
 

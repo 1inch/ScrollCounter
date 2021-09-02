@@ -143,13 +143,13 @@ public class EnchantedScrollCounter: UIView {
         setup()
     }
 
-    public func setValue(_ value: String, animated: Bool) {
-        scrollCounter.setValue(value, animated: animated)
+    public func setValue(_ value: String, animated: Bool, completion: (() -> Void)? = nil) {
+        scrollCounter.setValue(value, animated: animated, completion: completion)
         invalidateIntrinsicContentSize()
     }
 
-    public func setValue(_ value: Float, animated: Bool) {
-        scrollCounter.setValue(value, animated: animated)
+    public func setValue(_ value: Float, animated: Bool, completion: (() -> Void)? = nil) {
+        scrollCounter.setValue(value, animated: animated, completion: completion)
         invalidateIntrinsicContentSize()
     }
 
